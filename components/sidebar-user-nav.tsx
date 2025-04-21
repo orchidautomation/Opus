@@ -1,8 +1,7 @@
 'use client';
+
 import { ChevronUp } from 'lucide-react';
 import Image from 'next/image';
-import type { User } from 'next-auth';
-import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
 import {
@@ -18,8 +17,24 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-export function SidebarUserNav({ user }: { user: User }) {
+type SimpleUserProps = {
+  userId: string;
+  imageUrl: string | null;
+  fullName: string | null;
+  primaryEmailAddress: string | null;
+} | null;
+
+export function SidebarUserNav({ user }: { user: SimpleUserProps }) {
   const { setTheme, theme } = useTheme();
+
+  if (!user) {
+    return null;
+  }
+
+  const userEmail = user.primaryEmailAddress;
+  const userImageUrl = user.imageUrl;
+  const avatarUrl = userImageUrl || (userEmail ? `https://avatar.vercel.sh/${userEmail}` : '/default-avatar.png');
+  const displayName = user.fullName || userEmail || 'User';
 
   return (
     <SidebarMenu>
@@ -28,13 +43,13 @@ export function SidebarUserNav({ user }: { user: User }) {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10">
               <Image
-                src={`https://avatar.vercel.sh/${user.email}`}
-                alt={user.email ?? 'User Avatar'}
+                src={avatarUrl}
+                alt={`${displayName}'s Avatar`}
                 width={24}
                 height={24}
                 className="rounded-full"
               />
-              <span className="truncate">{user?.email}</span>
+              <span className="truncate">{displayName}</span>
               <ChevronUp className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -47,20 +62,6 @@ export function SidebarUserNav({ user }: { user: User }) {
               onSelect={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             >
               {`Toggle ${theme === 'light' ? 'dark' : 'light'} mode`}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <button
-                type="button"
-                className="w-full cursor-pointer"
-                onClick={() => {
-                  signOut({
-                    redirectTo: '/',
-                  });
-                }}
-              >
-                Sign out
-              </button>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

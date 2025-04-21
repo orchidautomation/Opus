@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
-import { auth } from '@/app/(auth)/auth';
+import { auth } from '@clerk/nextjs/server'; // Use Clerk's auth
 import { Chat } from '@/components/chat';
 import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
 import { DataStreamHandler } from '@/components/data-stream-handler';
@@ -18,14 +18,16 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     notFound();
   }
 
-  const session = await auth();
+  const { userId } = auth(); // Get userId from Clerk
 
   if (chat.visibility === 'private') {
-    if (!session || !session.user) {
+    // Check if user is authenticated
+    if (!userId) {
       return notFound();
     }
 
-    if (session.user.id !== chat.userId) {
+    // Check if authenticated user owns the chat
+    if (userId !== chat.userId) {
       return notFound();
     }
   }
@@ -58,7 +60,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           initialMessages={convertToUIMessages(messagesFromDb)}
           selectedChatModel={DEFAULT_CHAT_MODEL}
           selectedVisibilityType={chat.visibility}
-          isReadonly={session?.user?.id !== chat.userId}
+          isReadonly={userId !== chat.userId}
         />
         <DataStreamHandler id={id} />
       </>
@@ -72,7 +74,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         initialMessages={convertToUIMessages(messagesFromDb)}
         selectedChatModel={chatModelFromCookie.value}
         selectedVisibilityType={chat.visibility}
-        isReadonly={session?.user?.id !== chat.userId}
+        isReadonly={userId !== chat.userId}
       />
       <DataStreamHandler id={id} />
     </>

@@ -1,11 +1,9 @@
 'use client';
 
-import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
 
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
-import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
@@ -18,7 +16,15 @@ import {
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
-export function AppSidebar({ user }: { user: User | undefined }) {
+// Define the type for the simplified user props
+type SimpleUserProps = {
+  userId: string;
+  imageUrl: string | null;
+  fullName: string | null;
+  primaryEmailAddress: string | null;
+} | null;
+
+export function AppSidebar({ user }: { user: SimpleUserProps }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
@@ -59,9 +65,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarHistory user={user} />
+        <SidebarHistory />
       </SidebarContent>
-      <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
+      <SidebarFooter>
+        <div className="flex flex-col gap-2 p-2 mt-auto">
+          {/* SidebarUserNav removed - User info and sign out handled in header */}
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

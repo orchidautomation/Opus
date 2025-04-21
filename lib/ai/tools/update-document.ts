@@ -1,15 +1,17 @@
 import { DataStreamWriter, tool } from 'ai';
-import { Session } from 'next-auth';
+// import { Session } from 'next-auth'; // Remove Session import
 import { z } from 'zod';
 import { getDocumentById, saveDocument } from '@/lib/db/queries';
 import { documentHandlersByArtifactKind } from '@/lib/artifacts/server';
 
+// Update props to use userId string
 interface UpdateDocumentProps {
-  session: Session;
+  userId: string;
   dataStream: DataStreamWriter;
 }
 
-export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
+// Update function signature to use userId
+export const updateDocument = ({ userId, dataStream }: UpdateDocumentProps) =>
   tool({
     description: 'Update a document with the given description.',
     parameters: z.object({
@@ -42,10 +44,10 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
       }
 
       await documentHandler.onUpdateDocument({
-        document,
+        document, // Pass the fetched document
         description,
         dataStream,
-        session,
+        userId, // Pass the userId
       });
 
       dataStream.writeData({ type: 'finish', content: '' });
