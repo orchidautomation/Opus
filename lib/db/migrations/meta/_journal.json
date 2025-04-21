@@ -40,8 +40,15 @@
     {
       "idx": 5,
       "version": "7",
-      "when": 1741934630596,
-      "tag": "0005_wooden_whistler",
+      "when": 1745263681122,
+      "tag": "0005_exotic_gunslinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1745264266379,
+      "tag": "0006_unusual_wild_pack",
       "breakpoints": true
     }
   ]

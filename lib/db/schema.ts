@@ -11,10 +11,9 @@ import {
   boolean,
 } from 'drizzle-orm/pg-core';
 
+// Updated User table for Clerk (string ID, no email/password)
 export const user = pgTable('User', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  email: varchar('email', { length: 64 }).notNull(),
-  password: varchar('password', { length: 64 }),
+  id: text('id').primaryKey().notNull(), // Clerk User ID is text
 });
 
 export type User = InferSelectModel<typeof user>;
@@ -23,31 +22,16 @@ export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   createdAt: timestamp('createdAt').notNull(),
   title: text('title').notNull(),
-  userId: uuid('userId')
-    .notNull()
-    .references(() => user.id),
+  userId: text('userId').notNull(), // Changed to text to match Clerk user ID
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
+  workspace_id: uuid('workspace_id').references(() => Workspaces.id, { onDelete: 'cascade' }).notNull(), // Added workspace ID
 });
 
 export type Chat = InferSelectModel<typeof chat>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://github.com/vercel/ai-chatbot/blob/main/docs/04-migrate-to-parts.md
-export const messageDeprecated = pgTable('Message', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  chatId: uuid('chatId')
-    .notNull()
-    .references(() => chat.id),
-  role: varchar('role').notNull(),
-  content: json('content').notNull(),
-  createdAt: timestamp('createdAt').notNull(),
-});
-
-export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
-
-export const message = pgTable('Message_v2', {
+export const message = pgTable('Message', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   chatId: uuid('chatId')
     .notNull()
@@ -56,51 +40,10 @@ export const message = pgTable('Message_v2', {
   parts: json('parts').notNull(),
   attachments: json('attachments').notNull(),
   createdAt: timestamp('createdAt').notNull(),
+  workspace_id: uuid('workspace_id').references(() => Workspaces.id, { onDelete: 'cascade' }).notNull(), // Added workspace ID
 });
 
 export type DBMessage = InferSelectModel<typeof message>;
-
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://github.com/vercel/ai-chatbot/blob/main/docs/04-migrate-to-parts.md
-export const voteDeprecated = pgTable(
-  'Vote',
-  {
-    chatId: uuid('chatId')
-      .notNull()
-      .references(() => chat.id),
-    messageId: uuid('messageId')
-      .notNull()
-      .references(() => messageDeprecated.id),
-    isUpvoted: boolean('isUpvoted').notNull(),
-  },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-    };
-  },
-);
-
-export type VoteDeprecated = InferSelectModel<typeof voteDeprecated>;
-
-export const vote = pgTable(
-  'Vote_v2',
-  {
-    chatId: uuid('chatId')
-      .notNull()
-      .references(() => chat.id),
-    messageId: uuid('messageId')
-      .notNull()
-      .references(() => message.id),
-    isUpvoted: boolean('isUpvoted').notNull(),
-  },
-  (table) => {
-    return {
-      pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-    };
-  },
-);
-
-export type Vote = InferSelectModel<typeof vote>;
 
 export const document = pgTable(
   'Document',
@@ -112,9 +55,8 @@ export const document = pgTable(
     kind: varchar('text', { enum: ['text', 'code', 'image', 'sheet'] })
       .notNull()
       .default('text'),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => user.id),
+    userId: text('userId').notNull(), // Changed to text to match Clerk user ID
+    workspace_id: uuid('workspace_id').references(() => Workspaces.id, { onDelete: 'cascade' }).notNull(), // Added workspace ID
   },
   (table) => {
     return {
@@ -135,10 +77,9 @@ export const suggestion = pgTable(
     suggestedText: text('suggestedText').notNull(),
     description: text('description'),
     isResolved: boolean('isResolved').notNull().default(false),
-    userId: uuid('userId')
-      .notNull()
-      .references(() => user.id),
+    userId: text('userId').notNull(), // Changed to text to match Clerk user ID
     createdAt: timestamp('createdAt').notNull(),
+    workspace_id: uuid('workspace_id').references(() => Workspaces.id, { onDelete: 'cascade' }).notNull(), // Added workspace ID
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id] }),
@@ -150,3 +91,36 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+// === START: Added Workspace Schemas ===
+
+// Define the workspaces table
+export const Workspaces = pgTable('Workspaces', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  owner_user_id: text('owner_user_id').notNull(), // Clerk User ID
+  created_at: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Define the workspace_members table (join table for users and workspaces)
+export const WorkspaceMembers = pgTable('WorkspaceMembers', {
+  workspace_id: uuid('workspace_id').references(() => Workspaces.id, { onDelete: 'cascade' }).notNull(),
+  user_id: text('user_id').notNull(), // Clerk User ID
+  role: text('role', { enum: ['owner', 'admin', 'member'] }).default('member').notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.workspace_id, table.user_id] }), // Composite primary key
+  };
+});
+
+// Define the workspace_credentials table
+export const WorkspaceCredentials = pgTable('WorkspaceCredentials', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  workspace_id: uuid('workspace_id').references(() => Workspaces.id, { onDelete: 'cascade' }).notNull(),
+  tool_name: text('tool_name').notNull(),
+  encrypted_credentials: text('encrypted_credentials').notNull(), // Store encrypted value
+  created_at: timestamp('created_at').defaultNow().notNull(),
+});
+
+// === END: Added Workspace Schemas ===
